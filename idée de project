@@ -1,0 +1,13 @@
+beamforming sur sumatra earthquakeet faire de la backprojection pour essayer de retrouver l'évolution de la position de l'eq dans le temps 
+
+-> peut use du 3D ray tracing avec le beamforming - > beamforming de la première arrival  et on fait ensuite le la backprojection, puis beamform la p de l'event suivant et on le backproject etc...
+  
+-> à voir si on peut avior mod-le de vitesse dans la région assez facielement  -> sinon juste faire 
+-> mais du coup comme fait pas de full waveform  pas d'indicatoin sur l'amplitude de la first arrival 
+
+
+
+
+
+
+-> cross correlations avec Stehly ? -> et faire des dv/v ? 
