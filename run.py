@@ -42,8 +42,8 @@ freq = [1,5] #frequencies for filtering
 order = 2 #order du filtre  -> filtfilt donc sera doublé!
 
 #####  GRID OF SOURCES ##### 
-x = np.linspace(-74,-70, 15)
-y = np.linspace(-38, -33, 15)
+x = np.linspace(-77,-68, 20)
+y = np.linspace(-41, -30, 20)
 
 
 ######################## d
@@ -78,12 +78,6 @@ for event in eq_list.events:
 #RECHERCHE DE TRACES BROADBAND VENANT DE TOUS LES ARRAYS  AUTOUR DE L'EQ !!  CETTE CELLULE SERT À LES RÉCUP, PAS ENCORE À PLOT!
 compute_distance = Client_dist() #on utilise un outil qui calculera la distance angulaire qui est  nécessaire pour obspy pour calculer le travel time 
 # plt.close('all')
-
-# #parameters
-pd.read_csv('stations_TA.csv')
-
-
-# ## Now we know the stations, so we download their traces
 
 # In[9]:
 
@@ -200,19 +194,29 @@ stacks = np.zeros((nt, x.shape[0], x.shape[1]))
 model = TauPyModel(model='iasp91')
 
 
+obs_shifted = np.zeros(obs.shape) #o, lui donne même shape que non shifté car on va juste roll
+
 #just need to compute the time with 1D raytracing with obspy ()
 for i in tqdm(range(x.shape[0]),leave=False): #looping over potential sources  
     for j in range(x.shape[1]):
-        dist = np.zeros(len(distances_list_clean))
-        ttime = np.zeros_like(dist)
         for k in range(len(longitudes_list_clean)): # looping over receivers and computing their distance to the potnetial source location which is important to  shift the traces accordingly 
             dist_km = gps2dist_azimuth(latitudes_list_clean[k],longitudes_list_clean[k],y[i,j],x[i,j])[0]/1000
-            dist[k] = kilometers2degrees(dist_km) #  computing the distance between a potential source and the receivers 
-            ttime[k] = model.get_ray_paths(source_depth_in_km=eq_depth/1000, distance_in_degree=dist[k], phase_list=['P'])[0].time
-        obs_shifted = functions.shift(obs, ttime, fs_list_clean)
+            dist = kilometers2degrees(dist_km) #  computing the distance between a potential source and the receivers 
+            ###getting trael time 
+            ttime = model.get_ray_paths(source_depth_in_km=eq_depth/1000, distance_in_degree=dist, phase_list=['P'])[0].time
+            ### getting from cross corre
+            
+            ### we now know how much to shift the trace 
+            n_shift = int(ttime*fs) #on sait de combien on doit shift la trace  -> devra aussi prendre en compte l'effet de la cross correlation
+            
+            
+            polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # -> la polarité devrait être handled en fonction de la position théorique estimée de la source ! -> fournir les coordonnées de la station et les coordonnées du point consudéré  : conait le mechanisme et on va alors appliquer correction en mode 
+            trace = polarity*functions.normalize_trace(obs[k,:]) #on s'occupe de la trace enregistrée à 1 station 
+            obs_shifted[k,:] = functions.shift(trace,n_shift)
+            
         stacks[:,i,j] = np.sum(obs_shifted,axis=0)
         rms[i,j]  = np.sqrt(np.sum((stacks[:,i,j])**2)) 
-
+            
 time_to_save = np.array(time_list_good[0])
 
 np.save(f'{run_folder}/rms.npy',rms)
@@ -220,3 +224,5 @@ np.save(f'{run_folder}/stacks.npy',stacks)
 np.save(f'{run_folder}/x.npy',x)
 np.save(f'{run_folder}/y.npy',y)
 np.save(f'{run_folder}/time.npy',time_to_save)
+# np.save(f'{run_folder}/latitudes_list_clean.npy',data['Latitude'].values)
+# np.save(f'{run_folder}/longitudes_list_clean.npy',data['Longitude'].values)

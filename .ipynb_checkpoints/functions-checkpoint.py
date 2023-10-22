@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
 from typing import List
-
-
+from obspy.geodetics.base import gps2dist_azimuth
 
 def multiline(xs, ys, c, ax=None, **kwargs):
     """Plot lines with different colorings
@@ -46,21 +45,14 @@ def normalize_trace(trace):
     return trace/np.max(np.abs(trace))
     
 
-def handle_polarity():
-    az_mecha = 178 #azimuth de la faille
-    # if az < az_mecha
-    #     return 1
-    # else:
-    #     return -1
-    return 1
+def handle_polarity(lat1,lon1,lat2,lon2):
+    # az_mecha = 178 #azimuth du mechanisme   assime que mechanisme est pile NS  -> suffit de vérifier si la lon du receiver est plus petite ou plus grande que celle de source
+    if lon2 >= lon1 :  #lon1 = lon de la source 
+        return 1 #si station à droite
+    else:
+        return -1
     
 
-def shift(obs, tshift, fs_list_clean):
-    obs_shifted = np.zeros((len(obs[:,0]),len(obs[0,:])))
-    #looping over the decievers  for a given source     
-    for i in range(len(obs[:,0])):
-        n_shift = int(tshift[i]*fs_list_clean[i]) #on sait de combien on doit shift la trace 
-        polarity = handle_polarity()   # on sait si la trace doit être changée depolarisée
-        trace = polarity*normalize_trace(obs[i,:])
-        obs_shifted[i,:] = np.roll(trace,-n_shift) #doit shift de moins n pour que ça aille vers la gauche  
-    return obs_shifted 
+def shift(obs, n_shift):   
+    return np.roll(trace,-n_shift) #doit shift de moins n pour que ça aille vers la gauche   
+    
