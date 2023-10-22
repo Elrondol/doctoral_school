@@ -13,4 +13,4 @@ conda activate py3
 export PATH="/applis/environments/conda.sh:$PATH"
 # export PYTHONPATH="pycorr/v1.0:$PYTHONPATH"
 
-python PROJECT.py
+python run.py

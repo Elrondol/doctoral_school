@@ -21,6 +21,38 @@ import os
 from obspy import read
 import obspy.signal as sig
 
+
+run_folder = 'run_normalized'
+
+
+##### DOWNLOADING PARAMETERS ################
+start_delay_dl = -30
+duration_dl = 1800
+pad = 20 #télécharger pad secondes avant et après la trace pour s'assurer que elle soit pas affectée par effet de bord 
+
+
+##### parameters to remove the padding and  we can also change the parameters to only keep a specific part of the traces ######
+start_delay = 500 
+duration = 1200
+ 
+##### parameters to resmaple and to process all the traces ####
+fs = 40 #frequency at which we will resample all the traces 
+filtered = 'bandpass' #type of fitlered applied
+freq = [1,5] #frequencies for filtering 
+order = 2 #order du filtre  -> filtfilt donc sera doublé!
+
+#####  GRID OF SOURCES ##### 
+x = np.linspace(-74,-70, 15)
+y = np.linspace(-38, -33, 15)
+
+
+######################## d
+try:
+    os.mkdir(f'{run_folder}')
+except:
+    pass
+
+
 client = Client('IRIS')
 eventtime = UTCDateTime('2010-02-27 06:34:11')
 
@@ -65,12 +97,9 @@ azimuth_list_clean  = list(data['Azimuth'].values)
 channels = 'BHZ,HHZ,EHZ,SHZ'
 
 ################### TÉLÉCHARGEMENT DES TRACES ET ON LES RASSEMBLE DANS DES LISTES POUR POUVOIR TOUT PLOT AVEC LES COULEURS À LA FIN WAOUW 
-start_delay = -30
-duration = 1800
-pad = 20 #télécharger pad secondes avant et après la trace pour s'assurer que elle soit pas affectée par effet de bord 
 output_type = 'VEL'
-starttime_obspy = eq_time+start_delay-pad 
-endtime_obspy = eq_time+start_delay+duration+pad
+starttime_obspy = eq_time+start_delay_dl-pad 
+endtime_obspy = eq_time+start_delay_dl+duration_dl+pad
 
 bad_station_indexes = []
 
@@ -109,16 +138,6 @@ arr_list = []
 color_list = []
 fs_list_clean = []
 
-##### parameters to resmaple####
-fs = 40 #frequency at which we will resample all the traces 
-
-##### parameters to remove the padding and  we can also change the parameters to only keep a specific part of the traces ######
-start_delay = 500 
-duration = 1200
-
-filtered = 'bandpass'
-freq = [1,5]
-order = 2 #order du filtre  -> filtfilt donc sera doublé!
 
 for i in range(len(station_list_clean)): #on a supprimé les mauvaises stations et téléchargé les traces, avec le minimum de processing possible pour les garder en 
     #bon état
@@ -164,8 +183,6 @@ for i in range(len(time_list)):
 
 
 # Create a grid of potential sources : we use lat lon coordinates intead of cartesian coordinates for the gridsearch to make it easier
-x    = np.linspace(-74,-70, 50)
-y    = np.linspace(-38, -33, 50)
 x, y = np.meshgrid(x, y)
 
 # Depth of the source (assumed to be known)
@@ -196,5 +213,5 @@ for i in tqdm(range(x.shape[0]),leave=False): #looping over potential sources
         stacks[:,i,j] = np.sum(obs_shifted,axis=0)
         rms[i,j]  = np.sqrt(np.sum((stacks[:,i,j])**2)) 
 
-np.save('rms.npy',rms)
-np.save('stacks.npy',stacks)
+np.save(f'{run_folder}/rms.npy',rms)
+np.save(f'{run_folder}/stacks.npy',stacks)
