@@ -22,7 +22,7 @@ from obspy import read
 import obspy.signal as sig
 
 
-run_folder = 'run_time2'
+run_folder = 'run_time3'
 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -33,7 +33,7 @@ pad = 20 #télécharger pad secondes avant et après la trace pour s'assurer que
 
 ##### parameters to remove the padding and  we can also change the parameters to only keep a specific part of the traces ######
 start_delay = 500 
-duration = 700
+duration = 500
  
 ##### parameters to resmaple and to process all the traces ####
 fs = 40 #frequency at which we will resample all the traces 
@@ -46,7 +46,7 @@ x = np.linspace(-74,-70, 20)
 y = np.linspace(-38, -31, 20)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 5*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+plage = 2*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
 overlap = plage//2 #avoir un overlap de 50% -> pas encore implémenté ... 
 
 
