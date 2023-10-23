@@ -20,10 +20,12 @@ import pandas as pd
 import os
 from obspy import read
 import obspy.signal as sig
+from matplotlib.animation import FuncAnimation
 
 
-run_folder = 'run_time3'
 
+run_folder = 'run_test'
+cluster = False #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
 start_delay_dl = -30
@@ -42,11 +44,11 @@ freq = [1,5] #frequencies for filtering
 order = 2 #order du filtre  -> filtfilt donc sera doublé!
 
 #####  GRID OF SOURCES ##### 
-x = np.linspace(-74,-70, 20)
-y = np.linspace(-38, -31, 20)
+x = np.linspace(-74,-70, 2)
+y = np.linspace(-38, -31, 2)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 2*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+plage = 100*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
 overlap = plage//2 #avoir un overlap de 50% -> pas encore implémenté ... 
 
 
@@ -57,6 +59,10 @@ try:
 except:
     pass
 
+if cluster==True:
+    datapath = f'/home/parisnic/traces/'
+else:
+    datapath = f'/media/parisnic/STOCKAGE/traces/' 
 
 client = Client('IRIS')
 eventtime = UTCDateTime('2010-02-27 06:34:11')
@@ -103,14 +109,14 @@ endtime_obspy = eq_time+start_delay_dl+duration_dl+pad
 bad_station_indexes = []
 
 for i in tqdm(range(len(station_list_clean))):
-    if os.path.exists(f'/home/parisnic/traces/{station_list_clean[i]}.mseed')==False: 
+    if os.path.exists(datapath + station_list_clean[i] + '.mseed')==False:
         try:
             st = client.get_waveforms(network=network_list_clean[i], station=station_list_clean[i], location='*', channel=channels, attach_response=True,
                                               starttime=starttime_obspy,endtime=endtime_obspy)
             st.remove_response(output=output_type)
             st.detrend('demean')            
             tr = st[0]
-            tr.write(f"/home/parisnic/traces/{station_list_clean[i]}.mseed", format="MSEED")              
+            tr.write(datapath + station_list_clean[i] + ".mseed", format="MSEED")              
         except:
             bad_station_indexes.append(i)
     
@@ -140,7 +146,7 @@ fs_list_clean = []
 
 for i in range(len(station_list_clean)): #on a supprimé les mauvaises stations et téléchargé les traces, avec le minimum de processing possible pour les garder en 
     #bon état
-    st = read(f'/home/parisnic/traces/{station_list_clean[i]}.mseed')
+    st = read(datapath + station_list_clean[i] + '.mseed')
 
     if st[0].stats.sampling_rate>fs: #on resample si trop hf 
                 st.resample(fs, window='hann', no_filter=True, strict_length=False)
@@ -192,8 +198,9 @@ z = eq_depth/1000 #converted to km
 obs = np.array(arr_list_good) #normalement devrait avoir taille  nr, nt 
 nt = len(obs[0,:]) #number of samples : should be the same for all traces since we decimated them
 
-rms = np.zeros((nt//plage,x.shape[0],x.shape[1]))
-stacks = np.zeros((nt//plage,plage, x.shape[0], x.shape[1]))
+nl = nt//(plage-overlap)-1 #nnumber of time windows : depends on duration, fs, plage and overlap 
+rms = np.zeros((nl,x.shape[0],x.shape[1]))
+stacks = np.zeros((nl,plage, x.shape[0], x.shape[1]))
 
 #on utilise le ray tracing 1D d'obspy pour estimerle travel time entre la source et chacune des stations 
 model = TauPyModel(model='iasp91')
@@ -217,18 +224,19 @@ for i in range(x.shape[0]): #looping over potential sources
             polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # -> la polarité devrait être handled en fonction de la position théorique estimée de la source ! -> fournir les coordonnées de la station et les coordonnées du point consudéré  : conait le mechanisme et on va alors appliquer correction en mode  
             trace = polarity*functions.normalize_trace(obs[k,:])
             obs_shifted = functions.shift(trace,n_shift)
-            for l in range(nt//plage):
-                stacks[l,:,i,j] += obs_shifted[l*plage:(l+1)*plage]
+            for l in range(nl):
+                starting_idx = l*(plage-overlap)
+                stacks[l,:,i,j] += obs_shifted[starting_idx:starting_idx+plage]
         
-        for l in range(nt//plage):
+        for l in range(nl):
             rms[l,i,j]  = np.sqrt(np.sum((stacks[l,:,i,j])**2)) 
             
 
 ## définition du temps en output (aurait pu le baser sur la time liste good et soustraire le start_delay 
-times_to_save = np.zeros((nt//plage,2)) #pour mettre le tbeg et tend de chacune window 
+times_to_save = np.zeros((nl,2)) #pour mettre le tbeg et tend de chacune window 
 
-for i in range(nt//plage):
-    times_to_save[i,0] = plage/fs*i #comme on corrige traces pour aligner à 0, la première image correspond au temps 0 
+for i in range(nl):
+    times_to_save[i,0] = (plage-overlap)/fs*i #comme on corrige traces pour aligner à 0, la première image correspond au temps 0 
     times_to_save[i,1] = times_to_save[i,0]+plage/fs #plage pour avoir la durée de la window ajoutée au début de la window  
     
 
@@ -241,3 +249,94 @@ np.save(f'{run_folder}/times.npy',times_to_save)
 # np.save(f'{run_folder}/longitudes_list_clean.npy',data['Longitude'].values)
 
 
+### on profite à présent du run pour aussi en faire des figures et extraire la courbe de vitesse parce que why not c'est pas le temps que ça prend 
+#pourrait aussi faire une finite diff pour calculer l'évolution de la vitesse avec le temps  mais on a déjà une estimation pas trop mal de la vitesse avec 1er order
+
+times_fig = np.mean(times_to_save, axis = 1)
+
+fig, ax = plt.subplots()
+ax.set_title('RMS map for various source locations ')
+ax.set_xlabel('lon (°)')
+ax.set_ylabel('lat (°)')
+ax.set_aspect('equal')  # Make sure the aspect ratio is equal
+
+# Initialize pcolormesh
+im = ax.pcolormesh(x,y,rms[0,:,:], cmap='turbo',vmin=np.min(rms),vmax=np.max(rms))
+text_annotation = ax.text(-73.5,-37.5,f't={times_fig[0]}s',color='red', fontsize=15)
+ax.scatter(eq_lon, eq_lat, marker='*', s=30, color='green')
+fig.colorbar(im, ax=ax)
+
+
+# Function to update the pcolormesh for each time step
+def update(frame):
+    text_annotation.set_text(f't={times_fig[frame]}s')
+    im.set_array(rms[frame,:,:].ravel())
+    
+# Create an animation
+ani = FuncAnimation(fig, update, frames=len(times_fig), repeat=False)
+
+# Save the animation as an MP4 video
+ani.save(f'{run_folder}/animation_pcolormesh.mp4', writer='ffmpeg')
+
+
+###############################
+
+fig, ax = plt.subplots()
+ax.set_title('RMS map for various source locations ')
+ax.set_xlabel('lon (°)')
+ax.set_ylabel('lat (°)')
+ax.set_aspect('equal')  # Make sure the aspect ratio is equal
+
+# Initialize pcolormesh
+contours = ax.contourf(x,y,rms[0,:,:], cmap='turbo',levels=np.linspace(np.min(rms), np.max(rms), 20))
+ax.scatter(eq_lon, eq_lat, marker='*', s=30, color='green')
+text_annotation = ax.text(-73.5,-37.5,f't={times_fig[0]}s',color='red', fontsize=15)
+fig.colorbar(contours, ax=ax)
+
+
+# Function to update the pcolormesh for each time step
+def update(frame):
+    global contours
+    text_annotation.set_text(f't={times_fig[frame]}s')
+    # Update the pcolormesh with the data at the current time step
+    contours.collections.clear()  # Clear the old contour collections
+    contours = ax.contourf(x, y, rms[frame, :, :], cmap='turbo', levels=np.linspace(np.min(rms), np.max(rms), 20))
+    
+# Create an animation
+ani = FuncAnimation(fig, update, frames=len(times_fig), repeat=False)
+
+# Save the animation as an MP4 video
+ani.save(f'{run_folder}/animation_contourf.mp4', writer='ffmpeg')
+
+
+###################################"
+
+xx = np.zeros(len(times_fig))
+yy = np.zeros(len(times_fig))
+zz = np.zeros(len(times_fig))
+distances = np.zeros(len(times_fig))
+
+for i in range(len(times_fig)):
+    idx = np.unravel_index(np.argmax(np.abs(rms[i,:,:]), axis=None), rms[i,:,:].shape)
+    xx[i] = x[0,idx[0]] #on lui donne des coordonnées au lieu des indices 
+    yy[i] = y[idx[1],0]
+    zz[i] = rms[i,idx[0],idx[1]]    
+    distances[i] = gps2dist_azimuth(yy[i],xx[i],yy[0],xx[0])[0]/1000 #calcul distance par rapport à première position e, kliomètres 
+    
+
+### we only select idexes where the rms is larger than 50% of the max rms in zz 
+selected_idx = np.where(zz>=0.5*np.max(zz))[0]
+selected_idx = np.append(0,selected_idx) #rajoute le 0 au cas ou 
+
+weights = np.ones(len(times_fig[selected_idx]))
+weights[0] = 99999999 #to make sure the fit passes through the 0!
+fit = np.polyfit(times_fig[selected_idx],distances[selected_idx],1,w=weights )
+
+
+fig, ax = plt.subplots()
+ax.set_title('Distance of the rupture front to the epicenter as a function of time')
+ax.set_ylabel('Distance to *epicenter* (km))')
+ax.set_xlabel('Time since origin (s)')
+ax.plot(times_fig[selected_idx], np.polyval(fit,times_fig[selected_idx]))
+ax.plot(times_fig[selected_idx],distances[selected_idx])
+ax.text(0.05,0.9, f'v={round(fit[0],1)} km/s', fontsize=12, transform=ax.transAxes)
