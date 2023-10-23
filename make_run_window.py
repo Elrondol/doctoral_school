@@ -193,13 +193,13 @@ rms = np.zeros((nt//plage ,x.shape[0], x.shape[1]))
 # Initialize the stacks for each potential source
 obs = np.array(arr_list_good) #normalement devrait avoir taille  nr, nt 
 nt = len(obs[0,:]) #number of samples : should be the same for all traces since we decimated them
-stacks = np.zeros((nt, x.shape[0], x.shape[1]))
+stacks = np.zeros((nt//plage,plage, x.shape[0], x.shape[1]))
 
 #on utilise le ray tracing 1D d'obspy pour estimerle travel time entre la source et chacune des stations 
 model = TauPyModel(model='iasp91')
 
 
-obs_shifted = np.zeros(obs.shape) #o, lui donne même shape que non shifté car on va juste roll
+obs_shifted_windowed = np.zeros((len(obs[:,0]), plage))
 
 #just need to compute the time with 1D raytracing with obspy ()
 for i in tqdm(range(x.shape[0]),leave=False): #looping over potential sources  
@@ -214,13 +214,13 @@ for i in tqdm(range(x.shape[0]),leave=False): #looping over potential sources
             ### getting from cross corre
             
             ### we now know how much to shift the trace 
-            n_shift = int(ttime*fs) #on sait de combien on doit shift la trace  -> devra aussi prendre en compte l'effet de la cross correlation
+            n_shift = int((ttime-start_delay)*fs) #on sait de combien on doit shift la trace  -> devra aussi prendre en compte l'effet de la cross correlation
             
             
             polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # -> la polarité devrait être handled en fonction de la position théorique estimée de la source ! -> fournir les coordonnées de la station et les coordonnées du point consudéré  : conait le mechanisme et on va alors appliquer correction en mode  
             trace = polarity*functions.normalize_trace(obs[k,:])
-            obs_shifted[k,:] = functions.shift(trace,n_shift)
-            
+            obs_shifted = functions.shift(trace,n_shift)
+            obs_shifted_windowe[k,:] = obs_shifted[l*plage:(l+1)*plage]
         stacks[:,i,j] = np.sum(obs_shifted,axis=0)
         rms[i,j]  = np.sqrt(np.sum((stacks[:,i,j])**2)) 
             
