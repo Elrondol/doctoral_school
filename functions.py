@@ -53,6 +53,6 @@ def handle_polarity(lat1,lon1,lat2,lon2):
         return -1
     
 
-def shift(obs, n_shift):   
+def shift(trace, n_shift):   
     return np.roll(trace,-n_shift) #doit shift de moins n pour que ça aille vers la gauche   
     

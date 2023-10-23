@@ -22,7 +22,7 @@ from obspy import read
 import obspy.signal as sig
 
 
-run_folder = 'run_normalized'
+run_folder = 'run_normalized_polarity'
 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -42,8 +42,8 @@ freq = [1,5] #frequencies for filtering
 order = 2 #order du filtre  -> filtfilt donc sera doublé!
 
 #####  GRID OF SOURCES ##### 
-x = np.linspace(-77,-68, 20)
-y = np.linspace(-41, -30, 20)
+x = np.linspace(-74,-70, 50)
+y = np.linspace(-38, -33, 50)
 
 
 ######################## d
@@ -203,6 +203,8 @@ for i in tqdm(range(x.shape[0]),leave=False): #looping over potential sources
             dist_km = gps2dist_azimuth(latitudes_list_clean[k],longitudes_list_clean[k],y[i,j],x[i,j])[0]/1000
             dist = kilometers2degrees(dist_km) #  computing the distance between a potential source and the receivers 
             ###getting trael time 
+            print(k)
+            print(dist)
             ttime = model.get_ray_paths(source_depth_in_km=eq_depth/1000, distance_in_degree=dist, phase_list=['P'])[0].time
             ### getting from cross corre
             
@@ -210,8 +212,8 @@ for i in tqdm(range(x.shape[0]),leave=False): #looping over potential sources
             n_shift = int(ttime*fs) #on sait de combien on doit shift la trace  -> devra aussi prendre en compte l'effet de la cross correlation
             
             
-            polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # -> la polarité devrait être handled en fonction de la position théorique estimée de la source ! -> fournir les coordonnées de la station et les coordonnées du point consudéré  : conait le mechanisme et on va alors appliquer correction en mode 
-            trace = polarity*functions.normalize_trace(obs[k,:]) #on s'occupe de la trace enregistrée à 1 station 
+            polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # -> la polarité devrait être handled en fonction de la position théorique estimée de la source ! -> fournir les coordonnées de la station et les coordonnées du point consudéré  : conait le mechanisme et on va alors appliquer correction en mode  
+            trace = polarity*functions.normalize_trace(obs[k,:])
             obs_shifted[k,:] = functions.shift(trace,n_shift)
             
         stacks[:,i,j] = np.sum(obs_shifted,axis=0)
