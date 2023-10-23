@@ -46,7 +46,7 @@ x = np.linspace(-74,-70, 20)
 y = np.linspace(-38, -33, 20)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 20*fs # nombre de points d ela plage  # -> 2400 = 60s    -> faire en sorte de faire des trucs logiques 
+plage = 40 # nombre de points d ela plage  # -> 2400 = 60s    -> faire en sorte de faire des trucs logiques 
 overlap = 20
 
 
@@ -188,16 +188,18 @@ x, y = np.meshgrid(x, y)
 z = eq_depth/1000 #converted to km 
 
 # Initialize the RMS for each potential source
+rms = np.zeros((nt//plage ,x.shape[0], x.shape[1]))
+
 # Initialize the stacks for each potential source
 obs = np.array(arr_list_good) #normalement devrait avoir taille  nr, nt 
 nt = len(obs[0,:]) #number of samples : should be the same for all traces since we decimated them
-
-rms = np.zeros((nt//plage,x.shape[0],x.shape[1]))
 stacks = np.zeros((nt//plage,plage, x.shape[0], x.shape[1]))
 
 #on utilise le ray tracing 1D d'obspy pour estimerle travel time entre la source et chacune des stations 
 model = TauPyModel(model='iasp91')
 
+
+obs_shifted_windowed = np.zeros(lplage)
 
 #just need to compute the time with 1D raytracing with obspy ()
 
