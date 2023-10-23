@@ -22,7 +22,7 @@ from obspy import read
 import obspy.signal as sig
 
 
-run_folder = 'run_time'
+run_folder = 'run_time2'
 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -32,8 +32,8 @@ pad = 20 #télécharger pad secondes avant et après la trace pour s'assurer que
 
 
 ##### parameters to remove the padding and  we can also change the parameters to only keep a specific part of the traces ######
-start_delay = 400 
-duration = 1200
+start_delay = 500 
+duration = 700
  
 ##### parameters to resmaple and to process all the traces ####
 fs = 40 #frequency at which we will resample all the traces 
@@ -43,11 +43,11 @@ order = 2 #order du filtre  -> filtfilt donc sera doublé!
 
 #####  GRID OF SOURCES ##### 
 x = np.linspace(-74,-70, 20)
-y = np.linspace(-38, -33, 20)
+y = np.linspace(-38, -31, 20)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 20*fs # nombre de points d ela plage  # -> 2400 = 60s    -> faire en sorte de faire des trucs logiques 
-overlap = 20
+plage = 5*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+overlap = plage//2 #avoir un overlap de 50% -> pas encore implémenté ... 
 
 
 
@@ -223,13 +223,21 @@ for i in range(x.shape[0]): #looping over potential sources
         for l in range(nt//plage):
             rms[l,i,j]  = np.sqrt(np.sum((stacks[l,:,i,j])**2)) 
             
-# time_to_save = np.array(time_list_good[0])
 
+## définition du temps en output (aurait pu le baser sur la time liste good et soustraire le start_delay 
+times_to_save = np.zeros((nt//plage,2)) #pour mettre le tbeg et tend de chacune window 
+
+for i in range(nt//plage):
+    times_to_save[i,0] = plage/fs*i #comme on corrige traces pour aligner à 0, la première image correspond au temps 0 
+    times_to_save[i,1] = times_to_save[i,0]+plage/fs #plage pour avoir la durée de la window ajoutée au début de la window  
+    
 
 np.save(f'{run_folder}/rms.npy',rms)
 # np.save(f'{run_folder}/stacks.npy',stacks)
 np.save(f'{run_folder}/x.npy',x)
 np.save(f'{run_folder}/y.npy',y)
-# np.save(f'{run_folder}/time.npy',time_to_save)
+np.save(f'{run_folder}/times.npy',times_to_save)
 # np.save(f'{run_folder}/latitudes_list_clean.npy',data['Latitude'].values)
 # np.save(f'{run_folder}/longitudes_list_clean.npy',data['Longitude'].values)
+
+
