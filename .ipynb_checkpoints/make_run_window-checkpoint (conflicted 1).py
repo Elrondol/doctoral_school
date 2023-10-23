@@ -24,7 +24,7 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_test4'
+run_folder = 'run_test'
 cluster = False #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -55,7 +55,7 @@ overlap = plage//2 #avoir un overlap de 50% -> pas encore implémenté ...
 
 
 ###### cross correlation parameters ####
-cross_duration = 6 #duraction of the cross correlation 
+cross_duration = 10 #duraction of the cross correlation 
 cross_anticipation = cross_duration//2 # because it seems that the estimated travel time is overestimated, some P waves have already arrived, so this term allows to take them into account as well.  
 
 
@@ -217,11 +217,11 @@ model = TauPyModel(model='iasp91')
 # par contre l'effet de ça c'est qu'on perd un peu la notion de temps 0 pour l'eq ...  mais c'est handled normalement ...
 
 #maintenant on cherche de combien de temps corriger chacune des traces par rapport à ref avec cross corr en se basant sur loc de 'épicentre fournit par iris : 
-
-#################################### CROSS CORRELATION POUR CORRECTION DE TTIME EMPIRIQUE ######
+# on calcule ttime entre source et les points avant de  ... 
+#on a déja calculé distance à la référence en degrés de façon accurate -> peut donc facilement use ça dans une boucle pour rapidement shift les traces et les cross corréler 
+#avec la ref afin de savoir à chaque station k la valeur de shift qui devrait être appliquée 
 
 n_corr = np.zeros(len(distances_list_clean)) #le nombre d'échantillons par lequel il faudra shifter les traces par rapport à la ref pour avoir la meilleure cohérence de la P!
-polarity = np.ones(len(distances_list_clean)) #pareil on détermine la meilleur epolarité avec les cross correlations  -> on condière que polarite de k=0 est 1 
 
 ### s'occupe de traiter la ref #### 
 trace_ref = functions.normalize_trace(obs[0,:]) #on prend la ref, on la normalize et on la shift 
@@ -237,23 +237,13 @@ for k in range(1,len(distances_list_clean)): #pas beoisn de shifter la première
     n_shift = int((ttime-start_delay-delta_static)*fs)
     trace = functions.shift(trace,n_shift)
     ### but since there is lateral heterogeneity, we need to perform the cross correlations ... 
-    corr_pos = np.correlate(trace_ref[(delta_static-cross_anticipation)*fs:(delta_static-cross_anticipation+cross_duration)*fs],
-                        trace[(delta_static-cross_anticipation)*fs:(delta_static-cross_anticipation+cross_duration)*fs], mode='same') 
-    corr_neg = np.correlate(trace_ref[(delta_static-cross_anticipation)*fs:(delta_static-cross_anticipation+cross_duration)*fs],
-                        -trace[(delta_static-cross_anticipation)*fs:(delta_static-cross_anticipation+cross_duration)*fs], mode='same') 
+    corr = np.correlate(trace_ref[(delta_static-cross_anticipation)*fs:(delta_static-cross_anticipation+cross_duration)*fs],tr2[delta_static*fs-r:(delta_static+10)*fs-r], mode='same') 
     
-    pol_pos = np.max(np.abs(corr_pos))
-    pol_neg = np.max(np.abs(corr_neg))
+    n_corr[k] = np.argmax(np.abs(corr))-len(corr)//2 #en gros si c'est au milieu de la corr le shift est nul, et donc on shift de la pos - longueur de corr /2 
+    ########################## CETTE BOUCLE POURRAIT AUSSI VÉRIFIER LA MEILLEURE POLARITÉ POUR LA P !!! ##### 
+
     
-    if pol_pos >= pol_neg:
-        n_corr[k] = np.argmax(np.abs(corr_pos))-len(corr_pos)//2 #en gros si c'est au milieu de la corr le shift est nul, et donc on shift de la pos - longueur de corr /2 
-        polarity[k] = 1.
-    else:
-        n_corr[k] = np.argmax(np.abs(corr_neg))-len(corr_neg)//2 #en gros si c'est au milieu de la corr le shift est nul, et donc on shift de la pos - longueur de corr /2 
-        polarity[k] = -1.
-    
-##################################################################################################################
-    
+
 for i in range(x.shape[0]): #looping over potential sources  
     for j in range(x.shape[1]):
         for k in range(len(longitudes_list_clean)): # looping over receivers and computing their distance to the potnetial source location which is important to  shift the traces accordingly 
@@ -263,11 +253,10 @@ for i in range(x.shape[0]): #looping over potential sources
             ttime = model.get_ray_paths(source_depth_in_km=eq_depth/1000, distance_in_degree=dist, phase_list=['P'])[0].time
             
             ### we now know how much to shift the trace 
-            n_shift = int((ttime-start_delay-delta_static)*fs+n_corr[k]) #on a calculé au préalable le shift empirique attendu grâce aux cross-corr 
+            n_shift = int((ttime-start_delay-delta_static+n_corr[k])*fs) #on a calculé au préalable le shift empirique attendu grâce aux cross-corr 
 
-            # polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # 
-            
-            trace = polarity[k]*functions.normalize_trace(obs[k,:])
+            polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # -> la polarité devrait être handled en fonction de la position théorique estimée de la source ! -> fournir les coordonnées de la station et les coordonnées du point consudéré  : conait le mechanisme et on va alors appliquer correction en mode  
+            trace = polarity*functions.normalize_trace(obs[k,:])
             obs_shifted = functions.shift(trace,n_shift)
             for l in range(nl):
                 starting_idx = l*(plage-overlap)
@@ -281,7 +270,7 @@ for i in range(x.shape[0]): #looping over potential sources
 times_to_save = np.zeros((nl,2)) #pour mettre le tbeg et tend de chacune window 
 
 for i in range(nl):
-    times_to_save[i,0] = (plage-overlap)/fs*i  - delta_static #comme on corrige traces pour aligner à delta_static, ça veut dire que premier échantillon à 0-delta_static 
+    times_to_save[i,0] = (plage-overlap)/fs*i  - delta_static*fs #comme on corrige traces pour aligner à delta_static, ça veut dire que premier échantillon à 0-delta_static 
     times_to_save[i,1] = times_to_save[i,0]+plage/fs #plage pour avoir la durée de la window ajoutée au début de la window  
     
 
@@ -332,6 +321,7 @@ ax.set_xlabel('lon (°)')
 ax.set_ylabel('lat (°)')
 ax.set_aspect('equal')  # Make sure the aspect ratio is equal
 
+# Initialize pcolormesh
 contours = ax.contourf(x,y,rms[0,:,:], cmap='turbo',levels=np.linspace(np.min(rms), np.max(rms), 20))
 ax.scatter(eq_lon, eq_lat, marker='*', s=30, color='green')
 text_annotation = ax.text(-73.5,-37.5,f't={times_fig[0]}s',color='red', fontsize=15)
