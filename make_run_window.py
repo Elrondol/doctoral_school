@@ -24,8 +24,8 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_test4'
-cluster = False #juste pour qu'il sache où chercher les fichiers 
+run_folder = 'run_time_cross'
+cluster = True #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
 start_delay_dl = -30
@@ -35,7 +35,7 @@ pad = 20 #télécharger pad secondes avant et après la trace pour s'assurer que
 
 ##### parameters to remove the padding and  we can also change the parameters to only keep a specific part of the traces ######
 start_delay = 500 
-duration = 700
+duration = 800
 delta_static = 30 #delta static permet de réduire le shifting vers la gauche pour pouvoir avoir du temps avant l'eq 
 # les traces seront donc shiftées de travel time - start time - delta_static    ça sert en plus d'assurance pour que le shift avec les CC ne fasse par partir le truc en vrille
     
@@ -46,16 +46,16 @@ freq = [1,5] #frequencies for filtering
 order = 2 #order du filtre  -> filtfilt donc sera doublé!
 
 #####  GRID OF SOURCES ##### 
-x = np.linspace(-74,-70, 2)
-y = np.linspace(-38, -31, 2)
+x = np.linspace(-74,-70, 50)
+y = np.linspace(-38, -31, 50)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 100*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+plage = 10*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
 overlap = plage//2 #avoir un overlap de 50% -> pas encore implémenté ... 
 
 
 ###### cross correlation parameters ####
-cross_duration = 6 #duraction of the cross correlation 
+cross_duration = 8 #duraction of the cross correlation 
 cross_anticipation = cross_duration//2 # because it seems that the estimated travel time is overestimated, some P waves have already arrived, so this term allows to take them into account as well.  
 
 
