@@ -24,7 +24,7 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_test'
+run_folder = 'run_test2'
 cluster = True #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -246,15 +246,16 @@ for k in range(1,len(distances_list_clean)): #pas beoisn de shifter la première
     pol_neg = np.max(np.abs(corr_neg))
     
     if pol_pos >= pol_neg:
-        # n_corr[k] = np.argmax(np.abs(corr_pos))-len(corr_pos)//2 #en gros si c'est au milieu de la corr le shift est nul, et donc on shift de la pos - longueur de corr /2 
+        n_corr[k] = np.argmax(np.abs(corr_pos))-len(corr_pos)//2 #en gros si c'est au milieu de la corr le shift est nul, et donc on shift de la pos - longueur de corr /2 
         polarity[k] = 1.
     else:
-        # n_corr[k] = np.argmax(np.abs(corr_neg))-len(corr_neg)//2 #en gros si c'est au milieu de la corr le shift est nul, et donc on shift de la pos - longueur de corr /2 
+        n_corr[k] = np.argmax(np.abs(corr_neg))-len(corr_neg)//2 #en gros si c'est au milieu de la corr le shift est nul, et donc on shift de la pos - longueur de corr /2 
         polarity[k] = -1.
     
 
 # on fait plus la correction avec cross corrélation, on devrait avoir un truc similaire à avant si la polarité n'est pas inversée 
 np.save(f'{run_folder}/polarity.npy',polarity)
+np.save(f'{run_folder}/n_corr.npy', n_corr) #on save aussi de combien on a dû shift les traces pour améliorer la corrélation 
     
 ##################################################################################################################
     
