@@ -24,7 +24,7 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_time_cross'
+run_folder = 'run_test'
 cluster = True #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
