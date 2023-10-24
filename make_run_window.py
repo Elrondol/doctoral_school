@@ -268,7 +268,7 @@ for i in range(x.shape[0]): #looping over potential sources
             ttime = model.get_ray_paths(source_depth_in_km=eq_depth/1000, distance_in_degree=dist, phase_list=['P'])[0].time
             
             ### we now know how much to shift the trace 
-            n_shift = int((ttime-start_delay-delta_static)*fs+n_corr[k]) #on a calculé au préalable le shift empirique attendu grâce aux cross-corr 
+            n_shift = int((ttime-start_delay-delta_static)*fs-n_corr[k]) #on a calculé au préalable le shift empirique attendu grâce aux cross-corr 
 
             # polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # 
             
