@@ -24,7 +24,7 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_plage10_cross8'
+run_folder = 'run_plage20_cross16'
 cluster = True #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -50,12 +50,12 @@ x = np.linspace(-74,-70, 20)
 y = np.linspace(-38, -31, 20)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 10*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+plage = 20*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
 overlap = plage//2 #avoir un overlap de 50% -> pas encore implémenté ... 
 
 
 ###### cross correlation parameters ####
-cross_duration = 8 #duraction of the cross correlation 
+cross_duration = 16 #duraction of the cross correlation 
 cross_anticipation = cross_duration//2 # because it seems that the estimated travel time is overestimated, some P waves have already arrived, so this term allows to take them into account as well.  
 
 
