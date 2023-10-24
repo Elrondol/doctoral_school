@@ -24,7 +24,7 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_test3'
+run_folder = 'run_plage10_cross8'
 cluster = True #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
