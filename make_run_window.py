@@ -24,7 +24,7 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_plage6_cross4_hd_ht'
+run_folder = 'run_plage28_cross4_hd_ht'
 cluster = True #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -50,8 +50,8 @@ x = np.linspace(-74,-69, 60)
 y = np.linspace(-38, -31, 60)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 6*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
-overlap = 4*fs #plage//2 #avoir un overlap de 50% 
+plage = 28*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+overlap = 26*fs #plage//2 #avoir un overlap de 50% 
 
 #calculer le nombre maximum de pas pour ne pas obligatoirement aller jusqu'à la fin des traces vu qu'on lesprend assez longues pour avoir les Parrivals sur chacune
 nl = 200 #None   ####None or integer   if None, computes for all windows 
