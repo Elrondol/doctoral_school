@@ -24,7 +24,7 @@ from matplotlib.animation import FuncAnimation
 
 
 
-run_folder = 'run_test3'
+run_folder = 'run_plage14_cross6_hd_ht'
 cluster = True #juste pour qu'il sache où chercher les fichiers 
 
 ##### DOWNLOADING PARAMETERS ################
@@ -46,16 +46,19 @@ freq = [1,5] #frequencies for filtering
 order = 2 #order du filtre  -> filtfilt donc sera doublé!
 
 #####  GRID OF SOURCES ##### 
-x = np.linspace(-74,-70, 20)
-y = np.linspace(-38, -31, 20)
+x = np.linspace(-74,-69, 60)
+y = np.linspace(-38, -31, 60)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 10*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
-overlap = plage//2 #avoir un overlap de 50% -> pas encore implémenté ... 
+plage = 14*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+overlap = 12*fs #2*fs pour avoir avoir une window toutes les 2 secondes    #plage//2 #avoir un overlap de 50% -> pas encore implémenté ... 
+
+#calculer le nombre maximum de pas pour ne pas obligatoirement aller jusqu'à la fin des traces vu qu'on lesprend assez longues pour avoir les Parrivals sur chacune
+nl = 200 #None   ####None or integer   if None, computes for all windows 
 
 
 ###### cross correlation parameters ####
-cross_duration = 8 #duraction of the cross correlation 
+cross_duration = 6 #duraction of the cross correlation 
 cross_anticipation = cross_duration//2 # because it seems that the estimated travel time is overestimated, some P waves have already arrived, so this term allows to take them into account as well.  
 
 
@@ -204,7 +207,9 @@ z = eq_depth/1000 #converted to km
 obs = np.array(arr_list_good) #normalement devrait avoir taille  nr, nt 
 nt = len(obs[0,:]) #number of samples : should be the same for all traces since we decimated them
 
-nl = nt//(plage-overlap)-1 #nnumber of time windows : depends on duration, fs, plage and overlap 
+if nl == None: #if we haven't provided a set number of windows it will perform the computation over all the windows
+    nl = nt//(plage-overlap)-1    #nnumber of time windows : depends on duration, fs, plage and overlap 
+
 rms = np.zeros((nl,x.shape[0],x.shape[1]))
 stacks = np.zeros((nl,plage, x.shape[0], x.shape[1]))
 
@@ -268,7 +273,7 @@ for i in range(x.shape[0]): #looping over potential sources
             ttime = model.get_ray_paths(source_depth_in_km=eq_depth/1000, distance_in_degree=dist, phase_list=['P'])[0].time
             
             ### we now know how much to shift the trace 
-            n_shift = int((ttime-start_delay-delta_static)*fs+n_corr[k]) #on a calculé au préalable le shift empirique attendu grâce aux cross-corr 
+            n_shift = int((ttime-start_delay-delta_static)*fs-n_corr[k]) #on a calculé au préalable le shift empirique attendu grâce aux cross-corr 
 
             # polarity = functions.handle_polarity(y[i,j],x[i,j],latitudes_list_clean[k],longitudes_list_clean[k]) # 
             
