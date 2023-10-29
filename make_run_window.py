@@ -110,7 +110,7 @@ distances_list_clean = list(data['Distance'].values)
 azimuth_list_clean  = list(data['Azimuth'].values)
 channels = 'BHZ,HHZ,EHZ,SHZ'
 
-################### TÉLÉCHARGEMENT DES TRACES ET ON LES RASSEMBLE DANS DES LISTES POUR POUVOIR TOUT PLOT AVEC LES COULEURS À LA FIN WAOUW 
+################### TÉLÉCHARGEMENT DES TRACES ET ON LES RASSEMBLE DANS DES LISTES 
 output_type = 'VEL'
 starttime_obspy = eq_time+start_delay_dl-pad 
 endtime_obspy = eq_time+start_delay_dl+duration_dl+pad
@@ -146,7 +146,7 @@ for bad_index in sorted(bad_station_indexes, reverse=True):#c'est l'heure de sup
 
 
 
-#on fait à présent un tableau avec les traces, on resample les traces si besoin et on les filtres si l'on souhaite
+#on fait à présent un tableau avec les traces, on resample les traces si besoin et on les filtre si l'on souhaite
 time_list = []
 arr_list = []
 color_list = []
@@ -303,96 +303,3 @@ np.save(f'{run_folder}/times.npy',times_to_save)
 # np.save(f'{run_folder}/latitudes_list_clean.npy',data['Latitude'].values)
 # np.save(f'{run_folder}/longitudes_list_clean.npy',data['Longitude'].values)
 
-
-### on profite à présent du run pour aussi en faire des figures et extraire la courbe de vitesse parce que why not c'est pas le temps que ça prend 
-#pourrait aussi faire une finite diff pour calculer l'évolution de la vitesse avec le temps  mais on a déjà une estimation pas trop mal de la vitesse avec 1er order
-
-times_fig = np.mean(times_to_save, axis = 1)
-
-fig, ax = plt.subplots()
-ax.set_title('RMS map for various source locations ')
-ax.set_xlabel('lon (°)')
-ax.set_ylabel('lat (°)')
-ax.set_aspect('equal')  # Make sure the aspect ratio is equal
-
-# Initialize pcolormesh
-im = ax.pcolormesh(x,y,rms[0,:,:], cmap='turbo',vmin=np.min(rms),vmax=np.max(rms))
-text_annotation = ax.text(-73.5,-37.5,f't={times_fig[0]}s',color='red', fontsize=15)
-ax.scatter(eq_lon, eq_lat, marker='*', s=30, color='green')
-fig.colorbar(im, ax=ax)
-
-
-# Function to update the pcolormesh for each time step
-def update(frame):
-    text_annotation.set_text(f't={times_fig[frame]}s')
-    im.set_array(rms[frame,:,:].ravel())
-    
-# Create an animation
-ani = FuncAnimation(fig, update, frames=len(times_fig), repeat=False)
-
-# Save the animation as an MP4 video
-ani.save(f'{run_folder}/animation_pcolormesh.mp4', writer='ffmpeg')
-
-
-###############################
-
-fig, ax = plt.subplots()
-ax.set_title('RMS map for various source locations ')
-ax.set_xlabel('lon (°)')
-ax.set_ylabel('lat (°)')
-ax.set_aspect('equal')  # Make sure the aspect ratio is equal
-
-contours = ax.contourf(x,y,rms[0,:,:], cmap='turbo',levels=np.linspace(np.min(rms), np.max(rms), 20))
-ax.scatter(eq_lon, eq_lat, marker='*', s=30, color='green')
-text_annotation = ax.text(-73.5,-37.5,f't={times_fig[0]}s',color='red', fontsize=15)
-fig.colorbar(contours, ax=ax)
-
-
-# Function to update the pcolormesh for each time step
-def update(frame):
-    global contours
-    text_annotation.set_text(f't={times_fig[frame]}s')
-    # Update the pcolormesh with the data at the current time step
-    contours.collections.clear()  # Clear the old contour collections
-    contours = ax.contourf(x, y, rms[frame, :, :], cmap='turbo', levels=np.linspace(np.min(rms), np.max(rms), 20))
-    
-# Create an animation
-ani = FuncAnimation(fig, update, frames=len(times_fig), repeat=False)
-
-# Save the animation as an MP4 video
-ani.save(f'{run_folder}/animation_contourf.mp4', writer='ffmpeg')
-
-
-###################################"
-
-#à voir comment ça behave puisque maintenant on use  la vraie position de la source au lieu de la première trouvée 
-
-xx = np.zeros(len(times_fig))
-yy = np.zeros(len(times_fig))
-zz = np.zeros(len(times_fig))
-distances = np.zeros(len(times_fig))
-
-for i in range(len(times_fig)):
-    idx = np.unravel_index(np.argmax(np.abs(rms[i,:,:]), axis=None), rms[i,:,:].shape)
-    xx[i] = x[0,idx[0]] #on lui donne des coordonnées au lieu des indices 
-    yy[i] = y[idx[1],0]
-    zz[i] = rms[i,idx[0],idx[1]]    
-    distances[i] = gps2dist_azimuth(yy[i],xx[i],eq_lat,eq_lon)[0]/1000 #calcul distance par rapport à première position e, kliomètres 
-    
-
-### we only select idexes where the rms is larger than 50% of the max rms in zz 
-selected_idx = np.where(zz>=0.5*np.max(zz))[0]
-selected_idx = np.append(0,selected_idx) #rajoute le 0 au cas ou 
-
-weights = np.ones(len(times_fig[selected_idx]))
-weights[0] = 99999999 #to make sure the fit passes through the 0!
-fit = np.polyfit(times_fig[selected_idx],distances[selected_idx],1,w=weights )
-
-
-fig, ax = plt.subplots()
-ax.set_title('Distance of the rupture front to the epicenter as a function of time')
-ax.set_ylabel('Distance to *epicenter* (km))')
-ax.set_xlabel('Time since origin (s)')
-ax.plot(times_fig[selected_idx], np.polyval(fit,times_fig[selected_idx]))
-ax.plot(times_fig[selected_idx],distances[selected_idx])
-ax.text(0.05,0.9, f'v={round(fit[0],1)} km/s', fontsize=12, transform=ax.transAxes)
