@@ -50,15 +50,15 @@ x = np.linspace(-74,-69, 3)
 y = np.linspace(-38, -31, 3)
 
 ##################" WINDOW PARAMETERS ####### 
-plage = 28*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
-overlap = 26*fs #plage//2 #avoir un overlap de 50% 
+plage = 20*fs # nombre de points d ela plage  # -> 2400 = 60s    -> doit faire attention à ce que le la plage doit diviseur de la durée du signal (et attention en + avec overlap)
+overlap = 18*fs #plage//2 #avoir un overlap de 50% 
 
 #calculer le nombre maximum de pas pour ne pas obligatoirement aller jusqu'à la fin des traces vu qu'on lesprend assez longues pour avoir les Parrivals sur chacune
-nl = 10 #None   ####None or integer   if None, computes for all windows 
+nl = 200 #None   ####None or integer   if None, computes for all windows 
 
 
 ###### cross correlation parameters ####
-cross_duration = 4 #duraction of the cross correlation 
+cross_duration = 10 #duraction of the cross correlation 
 cross_anticipation = cross_duration//2 # because it seems that the estimated travel time is overestimated, some P waves have already arrived, so this term allows to take them into account as well.  
 
 
